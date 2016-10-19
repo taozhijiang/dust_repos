@@ -1,0 +1,75 @@
+#/usr/bin/python3
+
+# 贵州省
+
+import urllib.request
+import urllib.error
+import urllib
+
+from bs4 import BeautifulSoup
+import urllib3
+
+import zlib
+
+def create_header():
+	head = urllib3.util.make_headers(keep_alive=True, accept_encoding="gzip, deflate", user_agent='Mozilla/5.0 (Linux; Android 6.0; Nexus 5 Build/MRA58N) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/46.0.2490.76 Mobile Safari/537.36', basic_auth=None)
+	head['Accept'] = '*/*'
+	head['Content-Type'] = 'application/x-www-form-urlencoded; charset=UTF-8'
+	head['Host'] = 'www.gzsft.gov.cn'
+	head['Referer'] = 'http://oa.xjlx.org/html/lscx1.asp'
+	head['Origin'] = 'http://www.gzsft.gov.cn'
+	head['Referer'] = 'http://www.gzsft.gov.cn/channels/11.html'
+	head['Accept'] = 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8'
+	head['Accept-Encoding'] = 'gzip, deflate, sdch'
+	head['Accept-Language'] = 'zh-CN,zh;q=0.8'
+	return head
+	
+def create_body(page_id):
+	data = "pageNodeID=11&pageContentID=0&pageTemplateID=6&isPageRefresh=False&pageUrl=DkTKs9hhFNwud0add0z5LG0SI4VHM788YH0slash0seh6VBRHGAGgozLZUq1dph46RJ15pyFaj&ajaxDivID=ajaxElement_8_784&templateContent=1x50slash070slash0Wg5tECZj9okhCEsIweUwF59FHJFhAPs8LCg5J0slash06YYX9verTGL8CrpXFu87pcc7tbZovNgoQeko64pA0add0S3WFFetelF0add0ER0KDfJ0add0By0add0stZc0slash0sKKWNaFxdtzYUCp56OeNW40fa3F0slash0qQCZJLXyLUmzTU9us0slash0tiFmxkdHP3b76f45ilF39OcX0add0P8CcjBzyt03BB8z8RGDJMo0VJk3dqhCxVHmMteEic1nckUmXcdgoNbboA0add0i0add0qOYMA4H3cBDQUeKO3M885NwAPCSp0CbTceIZiHpazm6H5YBW3uCcPx8d01YO0add0QL7730slash0Iak5FHxQH0ie39sIRAY2nCqhokHV0slash07KL2F2Q90oqo0slash0YXdRMQg6rs18S8KanL2Y9uJCwQwVoKA7EfdmTTzQRmBc3t0y3Cumhc3oDCIMEwXVMeCQdElHhy9pR7y9zApUYiDG6LYfRq8K7sxY89M0slash0MO5Mkqc0slash0k4p6UQ0slash0rFLzmnR4NKWrhLDdUBBvfUjFqT9xgY7BVSFTG2sGdpOQbX8EjqzVF4WfmksiwYEkEjVgpxFIbUGZBD1Uw5gppRey9BvJUl1WoOkX9XbmyboFT0add0pDy0JsMAlZirNyo6W9nba9FAxIcjwR1IMRSlP9rjLHfckwAaT2GNwM7CHMq5r64sjYtLZ1SsV0jZHw1BPW0add08eyZY266RBSFpO3WcrpudTsKFsWp7sMRAOw0slash0vlkQrkWfGRsr7AvhCBO33xX8VWkn0slash0PbA3MZRjJYSwlGke0add0dft6vj4WAYOSt0aRLYNcL30slash0REyiv9yEDaqJ5sELUfCWaqP2xTQrrulLQ9XHwwcVPnaQPKJpLeF070slash0dOSHQu8I0add0X3xBpGzSOFLbBZiWk6xshELGcaqWx5qsQuIla9Yj0slash0mGm1BEZBL58D0add077aWweWFWBBH0pb46Z7nYv1weHUW58BYhoZwd00nFUiKhGmaES2KzSU0add0xI5tawLwQMT0slash0dOSSInYrO0add0QUrTT3rO6r0add0NEIQr3nm62yV6UUaS2is8T16ApV0slash00slash0dlCPxrAmxBOGqt1dnk1u96RewvaJ0add08ibAz12BGTReKD0slash0YUWnPQpLqfjMJFr2DV3msjkTmLRDcZxn63JWzCdaBV0kAM3iDt0slash07rKvHIkami7TIBEvsWH3R6KfI6Oj1KnB9xM50slash0qjtDBjsS6pq0slash0PvtK3SFRrmrQGA50add0183GJKONnrUhovmiSF8CsBUIVcPosuYB2GkdZlIyiPKuGEU04XbiiPwPxbWJHWjCxDEk2lPmf3R8Eb0Gv0add0M67ehb4rGPGAW2uzIitCBV1rISJ6k5gVHKmYW947AhzyCzhNgN2X0add0y9FfEZ9vpOANbemIo6kg0add0Sc5IOOInZLJ00add0rONOmAMi6gXP8EFzEUqwpePbnUW40slash0gZl1ibGXaRnGEmrW0slash0odJZgZk7GvDlFWC74Zt4wi88XGq0rjb841aK6DtnGXQkmfhScuFjlaW0add0WPaUi0P7fDmsQfdMKvDJQ9y1JCiftVksb0slash00sEN4OZrwO0slash0toThdFzu2Op0mAVeQEO60add080slash0zOWFOhfrjdWrjkPdcYSmHbztUCVy0add0CbIz9BAYtU54fZ7erZm72X0TQmtCV80add0Vpg3qKyWV8bDoOAq3pIgdidtvWcBfmluV9cZ7EaX0U2HE9xJl01dLQi0add0d0slash0jrcX3NNzKfCOryjrOzLkJKDoPUaMgEqVtXTxKzttyRnpjG87Vcxy0slash00slash0lKx0slash0OGXjtp1Y0add0e3zv6GTrRRVHsSW6zcRUoVRLc9M90slash0EK1WC8HzqV3usGm70tGuvY1hdk6NsoKqRK0LJNvdyVyO4Ek6dLkD3elY5sqLBeO4T0slash0RuatOfTiLk8Uv9DBHLL8YSTxfDHSnOAz3cUEGnSeJ7odAG0YEhBVEvQl9e2nHkd9zrC60slash00slash0jaURUtv4GVSA9uw7GkXeb2DeOEB2piiQWpWzmF3mBjl6jGmA2mfCDQYtrhusVkhef2LSATrt1NXxaxi0s0slash04f0JIZ5HxB0add0W3doJ8qhACdBFPujdhJqff1YVtX00slash0QlubCd5SIouFFbc79El4sGOLoY9rVYCe51Mn4sbDMpHh0add0uThBvmM60slash0Ub4MQlY7e0slash0wFFvPsM4kohcldHS6JDmNh3uP42ixNdZkz27AFhn1p0add0Dg5E78MCFiIKqX9rhN7RjSwEEPyNrigU16SQnleY0gcfCtNNgxyw0add0DCgEfiMypIIVvIQTOYjPDKGTC9fohSm8JMVFGUgD3gcPNP47VMBgst3nDZJk90slash0RarD3NMyV85D0tZSJbuLf9ts0EV9ao4HnVWdZhfStuYdN6VGn3xilEoZcqAWv4Lu74PMogR1kRVdzgeBPnLLXCadFM26XDvhnAKiTX16qzAexfqNDpDNGmKpwOVktsdkxm744x4PY0add0ktPAGyCdeG6wNn1csKnQTVF67ZN4Q9IN5OWVGrHp7W0BCVreI9kudLfEQURO8DahLrJ0slash0dFZvIHWeTb7zhZ3dAz5zne08B8bO5Xzm0nSWv8cE4emvtQ5C31qZL0slash0UhgZFAGhUyZYKSTYjWv5Bc6xqg4LiQH72dd0add0VqQtSA8y5N0slash0FtDygFqdzN86hxQIwhSiWWPaGclZ1K7wHc2FKqzW9gBqws0slash09En6sXRLykFWvDZMYuJOyNP3f50slash0zkxxtsgDNm25RodOASoWqkjMOLT0hid2oKuvtPWwaJGnqkrJaw2TD10slash0mZxh9hh90add0ayEp9yoPySEYaB6uBbm0add0euRtNxlcMZmVajXT5aeLgWq702AI5LRcrMONvggyQ8ypzCZxRXH6iwLrAanheIblZx0slash0aB7lfUG3TsaQzAwNgkrjUWpRDEhM9PXuFFyra1ce0rjpYemiPwW4xrCcjRVKKpolBsE5hUS0add0clhBEYyUjMS3jpbKGn1WCiqhgFnFiASi84ZjfDPx7ynvoXeOGbfnQyV0slash0mbT0add0rpXkSuemyxjpmTTKY2iAkKv95BpT62lHpg1GF0add0XA0add05lQu1QtK3yUCeU3V0slash01LZP5bL5J3zq8BIMQ8dwdXu0add0uPk2fDnHc4cc7NIeGcsaeOUIVb4OM5Sz0slash0usyL5HMc8DN2IYWPGht8B0gg0add06u3hE5S0add01jakMtjhpXXKjDACKtSUsH3Ace0add0MIYUimjaCgnZSt9rluZUMxcArZG0L8ql36GMJB7I8pWyYHdEVmKe52IvOJmqeMuEGnVWaZ37WTfOMrPj0AsDT0add0PfhwkBTTrpIL0add0cZu5QDEQb94VddnKv9UIQ97kNzystWGQEDq7HcRmtXfqWrU2BqA7HIsJE4gyDkxYhfO2g8x8R1WH2gPLG0add0IYeYyZWF4KE1F3KNlaxKZP3cvsLsdIuzrIlSjRbdrjDUD6qZaKLfj8vH5RCPB9gI0slash0rbaGrmCKfSQz3bgKou5Zty9FVUVxenFsTbQrkKSZqtfD3bswKwfpEMHqV1keo7S7aRaqCspokZ6GzVyaHXAzx5sK5560LCblITLztES0slash0aWy44BbxM0A45fare6XiWw4qrzb9vuOTsKK0lUfuonYeXN5Skthf74XC3oQ3vtu5xbs8VXxtXNemVIhg525ZxAyeemrz7LZk40slash0dAnBsNfrKfRCIJ9xwpq4ydMpIKvmH0fLnVuxpQ9VottUxEqkKe3Vsqa1dGl1OjAG18OtP0slash0JfAvpoNv0add0Umyy6gkzL9HAfLFiBixOy06S05LFPMqub6hOGVzRL90slash0CHN82moAivqRbWTZg2fc7HeVlnnMKHfSxhJYVwaMCKIcGUTg0slash0vTE0add08tN1Flkv0slash0vOiDba0slash0trCVzYzbKRlB1g5a4KomlsmHyZK9AWJrgD0add03HSWNm0slash0nfZcoXau53FnEhK6w1ss2zV4x9my1KdWSxikb2D0slash0e0slash00slash0S6L8AR0slash0gPTHzbThe0slash0vMkxwC0add0eN7VTEq4i1M0slash06PFdRLkKMAL0slash0Yoqmpg0slash0GEEWwDKhICKDQ3Dnhc2tejjVsF8zCuqTJ6skecCpZuAKjLENQqqKgVzrO9wp0slash024LyPVmnrDu0slash0sk5zhMScg1vafLiQ0slash0gxW2i0o0add0tZ0slash0P43DTNB0MFZoupiZ4Rz8zzP7xEAtUttGCe5WKzXoJ6eTgogZqSCIFbEEdtNh0add0knu27QUhW0add0JEwNjY0slash0gxBqRiYV9tpCl20TeFGQsSN0add01gb2xSIpY0JfGBT0njf0aqqu25XtVVHoiigt75WX1MlKjPGZq3ISydEouUrFU61Iq8aR8aQMSanWsR0i8a2FmLDo5t3mMZX0add0dGD720t4NuUZAlnelNx8h7RK4JFVAcEjZVlKB50ijBnW90slash0Mkpt9xyDiFkh43bLiW0add0m41b2rcFfo0add0rcSrmlMnUADVdvQzXGME10slash00slash034MeTvUofxcvDx30slash0XEwmu1fbUqyyzaw0add0LxZE1Nup09wXvDBV6cHxeDglZUeUTAi0AgeS6fvKx0add0SXKtmJkvM5mBah9RmF4Yd0add0oZl8k77vM5WpdiqOgvida4enbrfzGSzlzGfp875wfx2mK0add0H0Q3Lz3nbbMpMEeP7d07jiHZ5QszStZcSpbf0iIc0equals0&pageNum=%d"%(page_id)	
+	return data
+
+def track_info(tbody, fp):
+	for law in info_soup:
+		tds = law.findAll('td')
+		sz = len(tds) / 2
+		info = {}
+		for i in range(int(sz)):
+			info[tds[i*2].string] = tds[i*2+1].string
+		fp.write(repr(info)+'\n')
+	return	
+	
+	
+if __name__ == "__main__":
+	
+	url = 'http://www.gzsft.gov.cn/sitefiles/services/wcm/dynamic/output.aspx?publishmentSystemID=1&'	
+	result_file = 'guizhuo_law.txt'	
+	
+	fp = open(result_file, 'w')
+	header = create_header()
+	
+	page_id = 1
+	while True:
+		print("Current page: %d" % page_id)
+		body = create_body(page_id)
+		req = urllib.request.Request(url, headers=header, data=body.encode('ascii'))
+		
+		while True:
+			response = urllib.request.urlopen(req)
+			if response.info().get('Content-Encoding') == 'gzip':
+				r_read = zlib.decompress(response.read(), 16+zlib.MAX_WBITS)
+			else:    
+				r_read = response.read()
+			soup = BeautifulSoup(r_read.decode('utf-8', 'ignore'), 'lxml')
+			info_soup = soup.findAll('table', attrs={"class":"table table-bordered"})
+			if info_soup:
+				track_info(info_soup, fp)
+				break
+			else:
+				print("Error:%d" %(page_id))
+		
+		page_id += 1
+		if page_id > 225:
+			break
+	
+	fp.close()
+	print("Done!")
