@@ -9,7 +9,7 @@ import urllib
 from bs4 import BeautifulSoup
 import urllib3
 
-#import torndb
+import torndb
 import time
 
 import re
@@ -26,7 +26,7 @@ define("dbuser", default="root", help="database username")
 define("dbpass", default=None, help="database passwd")
 define("dbtimezone", default="+8:00")
 
-#db_conn = torndb.Connection("192.168.1.6", "v5_law", "root");
+db_conn = torndb.Connection("192.168.1.6", "v5_law", "root");
 
 def create_header():
 	head = urllib3.util.make_headers(keep_alive=True, accept_encoding="gzip, deflate", user_agent='Mozilla/5.0 (Linux; Android 6.0; Nexus 5 Build/MRA58N) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/46.0.2490.76 Mobile Safari/537.36', basic_auth=None)
@@ -38,22 +38,78 @@ def create_header():
 	head['Accept-Encoding'] = 'gzip, deflate'
 	head['Accept-Language'] = 'zh-CN,zh;q=0.8,en;q=0.6,ja;q=0.4'
 	head['Content-Type'] = 'application/x-www-form-urlencoded'
-	head['Referer'] = 'http://www.fjcourt.gov.cn/page/public/RefereeclericalMore.aspx?cate=0902'
-	head['Cookie'] = 'yikikata=6e842253-10bd35ede5d87d5e4007b5e96c3e57e7; gsScrollPos=; brmidyrvj=both; ASP.NET_SessionId=fchvv0qvpgtt30ru33ywlmau; yikikata=6e851983-63d254046d07240f9cc590d02fdceb09; _gscu_1086777894=82203576fiuw3312; _gscs_1086777894=t82463382309mfm13|pv:19; _gscbrs_1086777894=1'
+	head['Referer'] = 'http://www.fjcourt.gov.cn/page/public/RefereeclericalMore.aspx?cate=0902&yikikata=b7105585-f0401abb99fd0b2a06524975b9fccef4'
+	head['Cookie'] = 'gsScrollPos=; yikikata=70665499-665889ff0101e871960a7e2ee788efc3; brmidyrvj=both; ASP.NET_SessionId=fchvv0qvpgtt30ru33ywlmau; yikikata=70664efd-8918832bcb05c0b0072fb2e1f2eca5d6; _gscu_1086777894=82203576fiuw3312; _gscs_1086777894=t827192036j54q421|pv:5; _gscbrs_1086777894=1'
 	return head
 	
 def request_body(url):
-	return
+	while True:
+		ret = ""
+		r_read = ""
+		req = urllib.request.Request(url, headers=create_header())
+		try:
+			response = urllib.request.urlopen(req, timeout=10)
+			if response.info().get('Content-Encoding') == 'gzip':
+				r_read = zlib.decompress(response.read(), 16+zlib.MAX_WBITS)
+			else:    
+				r_read = response.read()
+		except:
+			print("Request time out: " + url )
+			continue
+			
+		soup = BeautifulSoup(r_read.decode('utf-8'), 'lxml')
+		bodys = soup.find('div', attrs={"class":"bd-article"})
+		if not bodys:
+			print("Error1:" + url)
+			sys.exit()
+		body = bodys.findAll('div')
+		if body:
+			for item in body:
+				if item and item.string:
+					ret += item.string.strip() + "\n"
+			if len(ret) > 100:
+				break
+				
+		body = bodys.findAll('p')
+		if not body:
+			print("Error2:" + url)
+			sys.exit()
+		for item in body:
+			if item and item.text:
+				ret += item.text.strip() + "\n"
+		if len(ret) > 100:
+			break
+		
+		print("Retry: " + url)
+		
+	return ret
 
 def track_info(info_soup):
-	print(info_soup)
+	items = info_soup.findAll('li')
+	for item in items:
+		link = 'http://www.fjcourt.gov.cn'+item.a.get('href')
+		a = item.a.text.strip()
+		fy = a[a.index('[')+1:a.index(']')].strip()
+		anj = a[len(fy)+3:]
+		title = anj[:anj.index('[')].strip()
+		time = item.span.text[1:-2].strip()
+		neirong = request_body(link)
+		neirong = db_conn.escape_string(neirong)
+		print(title)
+		if time[-2:] == '-0':
+			time = time[:-1] + '1'
+		try:
+			sql = ''' INSERT INTO v5_high_court(`案件名`,`地区`,`法院名称`,`url`,`文书内容`, `发布时间`) VALUES( '{0}', '{1}', '{2}', '{3}', '{4}', '{5}'); '''
+			sql = sql.format(title, '福建', fy, link, neirong, time)
+			db_conn.execute(sql)
+		except:
+			print("SQL Error:" + sql)
 	return	
 	
 
 if __name__ == "__main__":
-	
-	header = create_header()
-	url_prefix = "http://www.fjcourt.gov.cn/page/public/RefereeclericalMore.aspx?cate=0902"
+
+	url_prefix = "http://www.fjcourt.gov.cn/page/public/RefereeclericalMore.aspx?cate=0902&yikikata=70665499-665889ff0101e871960a7e2ee788efc3"
 	page_id = 1
 	
 	header = create_header()
@@ -72,7 +128,8 @@ if __name__ == "__main__":
 	page_id = 2
 	while True:
 		print("Current page: %d" % page_id)
-		body = {'__VIEWSTATE':this_stat, '__EVENTTARGET':'ctl00$cplContent$AspNetPager1', '__EVENTARGUMENT':repr(page_id), 'ctl00$cplContent$AspNetPager1_input':repr(page_id-1)}
+		#print(this_stat)
+		body = {'__VIEWSTATE':this_stat, '__EVENTARGUMENT':repr(page_id), '__EVENTTARGET':'ctl00$cplContent$AspNetPager1', 'ctl00$cplContent$AspNetPager1_input':repr(page_id-1)}
 		dat = urllib.parse.urlencode(body).encode('ascii')
 		req = urllib.request.Request(url_prefix, headers=header, data=dat )
 		try:
@@ -81,20 +138,19 @@ if __name__ == "__main__":
 				r_read = zlib.decompress(response.read(), 16+zlib.MAX_WBITS)
 			else:    
 				r_read = response.read()
-		except urllib.error.HTTPError as e:
-			print(e.code)
-			print(e.read())
+		except:
+			print("Request url failed for page_id:%d " % page_id)
+			print("Retry: " + url_prefix)
+			continue
+			
 		soup = BeautifulSoup(r_read.decode('utf-8'), 'lxml')
 		this_stat = soup.find('input', attrs={"id":"__VIEWSTATE"})['value']
 		info_soup = soup.find('ul', attrs={"class":"module-case-items"})
 		if info_soup:
 			track_info(info_soup)
-			
-		if soup.find('a', attrs={'id':"ess_ctr740_LawOfficeSearchList_lbtnNextPage", 'disabled':'disabled'}) :
-			break
 		
 		page_id += 1
-		if page_id > 42918:
+		if page_id > 42931:
 			break
 	
 	#db_conn.close()

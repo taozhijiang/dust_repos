@@ -9,7 +9,7 @@ import urllib
 from bs4 import BeautifulSoup
 import urllib3
 
-#import torndb
+import torndb
 import time
 
 import re
@@ -26,7 +26,7 @@ define("dbuser", default="root", help="database username")
 define("dbpass", default=None, help="database passwd")
 define("dbtimezone", default="+8:00")
 
-#db_conn = torndb.Connection("192.168.1.6", "v5_law", "root");
+db_conn = torndb.Connection("192.168.1.6", "v5_law", "root");
 
 def create_header():
 	head = urllib3.util.make_headers(keep_alive=True, accept_encoding="gzip, deflate", user_agent='Mozilla/5.0 (Linux; Android 6.0; Nexus 5 Build/MRA58N) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/46.0.2490.76 Mobile Safari/537.36', basic_auth=None)
@@ -43,18 +43,62 @@ def create_header():
 	return head
 	
 def request_body(url):
-	return
+	while True:
+		ret = ""
+		r_read = ""
+		req = urllib.request.Request(url, headers=create_header())
+		try:
+			response = urllib.request.urlopen(req, timeout=10)
+			if response.info().get('Content-Encoding') == 'gzip':
+				r_read = zlib.decompress(response.read(), 16+zlib.MAX_WBITS)
+			else:    
+				r_read = response.read()
+		except:
+			print("Request error: " + url )
+			continue
+			
+		soup = BeautifulSoup(r_read.decode('utf-8'), 'lxml')
+		bodys = soup.find('body')
+		if not bodys:
+			print("Error1:" + url)
+			#sys.exit()
+			return '【内容为空】'
+		body = bodys.findAll('div')
+		if body:
+			for item in body:
+				if item and item.string:
+					ret += item.string.strip() + "\n"
+			if len(ret) > 100:
+				break
+				
+		body = bodys.findAll('p')
+		if not body:
+			print("Error2:" + url)
+			sys.exit()
+		for item in body:
+			if item and item.text:
+				ret += item.text.strip() + "\n"
+		if len(ret) > 100:
+			break
+		
+		print("Retry: " + url)
+	return ret
 
 def track_info(info_soup):
 	trs = info_soup.findAll('tr')
 	for item in trs:
 		tds = item.findAll('td')
-		print(tds[0].text.strip())
-		print(tds[1].text.strip())
+		fy = tds[0].text.strip()
+		title = tds[1].text.strip()
 		a = tds[1].a.get('onclick')
 		link = "http://www.gdcourts.gov.cn/gdgy/s/cpwsgk/findWsnrByid?wsid="+a[len('ckwsnr(\''):a.index('\', \'')]
-		print(link)
-		print(tds[2].text.strip())
+		anhao = tds[2].text.strip()
+		neirong = request_body(link)
+		neirong = db_conn.escape_string(neirong)
+		print(title)
+		sql = ''' INSERT INTO v5_high_court(`案件名`,`地区`,`法院名称`,`url`,`文书内容`, `案号`) VALUES( '{0}', '{1}', '{2}', '{3}', '{4}', '{5}'); '''
+		sql = sql.format(title, '广东', fy, link, neirong, anhao)
+		db_conn.execute(sql)
 	return	
 	
 
@@ -66,7 +110,7 @@ if __name__ == "__main__":
 	
 	while True:
 		print("Current page: %d" % page_id)
-		body = { "flag":"1", "pageNo":repr(page_id), "pageSize":"20", "fymc2":"广东省高院", "fjm2":"J00", "spcx2":"一审"}
+		body = { "flag":"1", "pageNo":repr(page_id), "pageSize":"20", "fymc2":"广东省高院", "fjm2":"J00", "spcx2":"二审"}
 		dat = urllib.parse.urlencode(body).encode('ascii')
 		req = urllib.request.Request(url_prefix, headers=header, data=dat )
 		try:
@@ -86,7 +130,7 @@ if __name__ == "__main__":
 		page_id += 1
 		# 一审 20*3
 		# 二审 20*50 最多一千条
-		if page_id > 3:
+		if page_id > 50:
 			break
 	
 	#db_conn.close()
