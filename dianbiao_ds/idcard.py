@@ -2,7 +2,7 @@
 
 #######################
 #
-# 电表自动读数系统
+# 身份证自动读数系统
 #
 #######################
 
@@ -75,10 +75,11 @@ def img_contour_select(ctrs, im):
         approx = cv2.approxPolyDP(item, epsilon, True)  
         if len(approx) <= 8:
             rect = cv2.minAreaRect(item)
-            if rect[1][0] < 20 or rect[1][1] < 20:
+            #只考虑水平的情况
+            if rect[2] < -10 and rect[2] > -80:
                 continue
-            if rect[1][0] > 150 or rect[1][1] > 150:
-                continue        
+            if rect[1][0] < 10 or rect[1][1] < 10:
+                continue
             #ratio = (rect[1][1]+0.00001) / rect[1][0]
             #if ratio > 1 or ratio < 0.9:
             #    continue
@@ -108,15 +109,21 @@ def img_tesseract_detect(c_rect, im):
     rect[2] = pts[np.argmin(diff)]
     rect[1] = pts[np.argmax(diff)]    
 
-    dst = np.float32([[0,0],[0,100],[200,0],[200,100]])
+    width = rect[3][0] - rect[0][0]
+    height = rect[3][1] - rect[0][1]
+    
+    width = (int)((50.0 / height) * width)
+    height = 50
+    
+    dst = np.float32([[0,0],[0,height],[width,0],[width,height]])
     
     M = cv2.getPerspectiveTransform(rect, dst)
-    warp = cv2.warpPerspective(im, M, (200, 100))
+    warp = cv2.warpPerspective(im, M, (width, height))
     
     img_show_hook("剪裁识别图像", warp) 
     
     warp = np.array(warp, dtype=np.uint8)
-    radius = 10
+    radius = 13
     selem = disk(radius)
     
     #　使用局部自适应OTSU阈值处理
@@ -124,13 +131,13 @@ def img_tesseract_detect(c_rect, im):
     l_otsu = np.uint8(warp >= local_otsu)
     l_otsu *= 255
     
-    kernel = cv2.getStructuringElement(cv2.MORPH_RECT,(4, 4))
+    kernel = cv2.getStructuringElement(cv2.MORPH_RECT,(2,2))
     l_otsu = cv2.morphologyEx(l_otsu, cv2.MORPH_CLOSE, kernel)    
     
     img_show_hook("局部自适应OTSU图像", l_otsu) 
     
     print("识别结果：")
-    print(pytesseract.image_to_string(Image.fromarray(l_otsu)))
+    print(pytesseract.image_to_string(Image.fromarray(l_otsu), lang="chi-sim"))
     
     cv2.waitKey(0)
     return 
@@ -140,11 +147,11 @@ if __name__ == "__main__":
     
     print("...图片文字识别系统...")
     
-    F1 = "172_79.jpg"
-    F2 = "633_88.jpg"
+    F1 = "IMG_2082_Z.JPG"
+    F2 = "IMG_4438.JPG"
     
-    img = cv2.imread(F2)
-    img = imutils.resize(img, width = 480)
+    img = cv2.imread(F1)
+    img = imutils.resize(img, width = 600)
     img_gray = cv2.cvtColor(img,cv2.COLOR_BGR2GRAY)
     
     sb_img = img_sobel_binary(img, (5,5))

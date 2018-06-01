@@ -1,0 +1,11 @@
+Debug/
+Release/
+obj/
+log/
+*.log
+forkp.vpj
+forkp.vpw
+forkp.vpwhist
+forkp.vpwhistu
+forkp.vtg
+.DS_Store

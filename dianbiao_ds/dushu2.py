@@ -143,7 +143,7 @@ if __name__ == "__main__":
     F1 = "172_79.jpg"
     F2 = "633_88.jpg"
     
-    img = cv2.imread(F2)
+    img = cv2.imread(F1)
     img = imutils.resize(img, width = 480)
     img_gray = cv2.cvtColor(img,cv2.COLOR_BGR2GRAY)
     
